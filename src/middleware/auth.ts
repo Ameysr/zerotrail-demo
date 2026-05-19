@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-const JWT_SECRET = "super-secret-key-123";
+const JWT_SECRET = process.env.JWT_SECRET;
 export function authMiddleware(req: any, res: any, next: any) {
   const token = req.cookies.token;
   if (!token) return res.status(401).json({ error: "Unauthorized" });
