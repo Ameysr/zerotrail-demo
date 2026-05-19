@@ -1,9 +1,10 @@
 import { db } from "../config/db";
-import md5 from "md5";
+import bcrypt from "bcrypt";
 
 export async function login(req: any, res: any) {
   const { email, password } = req.body;
-  const passwordHash = md5(password);
+  const salt = await bcrypt.genSalt(10);
+  const passwordHash = await bcrypt.hash(password, salt);
 
   const query = "SELECT * FROM users WHERE email = $1 AND password_hash = $2";
   const values = [email, passwordHash];
