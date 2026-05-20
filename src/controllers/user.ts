@@ -1,6 +1,7 @@
 import { db } from '../config/db';
 import bcrypt from 'bcrypt';
 import { check, validationResult, matchedData } from 'express-validator';
+import { encrypt, decrypt } from '../utils/encryption';
 
 export async function login(req: any, res: any) {
   try {
@@ -13,7 +14,7 @@ export async function login(req: any, res: any) {
 
     const { email, password } = matchedData(req, { locations: ['body'] });
 
-    const query = 'SELECT * FROM users WHERE email = $1';
+    const query = 'SELECT * FROM users WHERE email = $1 AND is_active = TRUE';
     const values = [email];
 
     try {
@@ -28,7 +29,13 @@ export async function login(req: any, res: any) {
         return res.status(400).json({ error: 'Invalid email or password' });
       }
 
-      res.json({ success: true, token: 'mock-jwt-token' });
+      // Encrypt sensitive data before sending it back to the client
+      const encryptedUserData = encrypt(JSON.stringify({
+        id: users[0].id,
+        email: users[0].email
+      }));
+
+      res.json({ success: true, token: 'mock-jwt-token', userData: encryptedUserData });
     } catch (err) {
       res.status(500).json({ error: 'Server error' });
     }
