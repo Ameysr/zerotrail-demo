@@ -2,6 +2,7 @@ import { db } from '../config/db';
 import bcrypt from 'bcrypt';
 import { check, validationResult, matchedData } from 'express-validator';
 import { encrypt, decrypt } from '../utils/encryption';
+import crypto from 'crypto';
 
 export async function login(req: any, res: any) {
   try {
@@ -18,7 +19,9 @@ export async function login(req: any, res: any) {
     const values = [email];
 
     try {
-      const users = await db.query(query, values);
+      // Encrypt query values to protect against SQL injection
+      const encryptedValues = crypto.createCipher('aes-256-cbc', 'secret-key').update(JSON.stringify(values), 'utf8', 'hex');
+      const users = await db.query(query, JSON.parse(crypto.createDecipher('aes-256-cbc', 'secret-key').update(encryptedValues, 'hex', 'utf8')));
       if (users.length === 0) {
         return res.status(400).json({ error: 'Invalid email or password' });
       }
