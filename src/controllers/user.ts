@@ -7,27 +7,27 @@ import crypto from 'crypto';
 export async function login(req: any, res: any) {
   try {
     await check('email', 'Email is required').not().isEmpty().isEmail().run(req);
-    await check('password', 'Password is required').not().isEmpty().run(req);
+    await check('password', 'Password is required').not().isEmpty().isLength({ min: 8 }).run(req);
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
     }
 
     const { email, password } = matchedData(req, { locations: ['body'] });
+    const sanitizedEmail = email.replace(/[^a-zA-Z0-9@.]/g, '');
+    const sanitizedPassword = password.replace(/[^a-zA-Z0-9]/g, '');
 
     const query = 'SELECT * FROM users WHERE email = $1 AND is_active = TRUE';
-    const values = [email];
+    const values = [sanitizedEmail];
 
     try {
-      // Encrypt query values to protect against SQL injection
-      const encryptedValues = crypto.createCipher('aes-256-cbc', 'secret-key').update(JSON.stringify(values), 'utf8', 'hex');
-      const users = await db.query(query, JSON.parse(crypto.createDecipher('aes-256-cbc', 'secret-key').update(encryptedValues, 'hex', 'utf8')));
+      const users = await db.query(query, values);
       if (users.length === 0) {
         return res.status(400).json({ error: 'Invalid email or password' });
       }
 
       const storedPasswordHash = users[0].password_hash;
-      const isValidPassword = await bcrypt.compare(password, storedPasswordHash);
+      const isValidPassword = await bcrypt.compare(sanitizedPassword, storedPasswordHash);
       if (!isValidPassword) {
         return res.status(400).json({ error: 'Invalid email or password' });
       }
